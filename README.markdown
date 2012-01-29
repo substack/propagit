@@ -31,18 +31,27 @@ the commands you want to run after the `--`:
     Listening on :8085
     ^C
 
-todo
-====
+usage
+=====
 
-* propagit repl
-    
-* propagit log
+```
+Usage:
+  propagit OPTIONS hub
+    Create a server to coordinate drones.
+    --port       port to listen on
+    --secret     password to use
+    --repodir    git repository directory
 
-* propagit list
+  propagit OPTIONS drone
+    --hub        connect to the hub host:port
+    --secret     password to use
+    --role       service role to be
 
-* port mapping?
-
-* process management
+  propagit OPTIONS deploy REPO COMMIT [COMMAND...]
+    --hub        connect to the hub host:port
+    --secret     password to use
+    --role       deploy under this role
+```
 
 install
 =======

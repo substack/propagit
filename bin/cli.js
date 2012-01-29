@@ -119,6 +119,27 @@ else if (cmd === 'deploy') {
         else if (name === 'end') process.exit();
     });
 }
+else {
+    console.log([
+        'Usage:',
+        '  propagit OPTIONS hub',
+        '    Create a server to coordinate drones.',
+        '    --port       port to listen on',
+        '    --secret     password to use',
+        '    --repodir    git repository directory',
+        '',
+        '  propagit OPTIONS drone',
+        '    --hub        connect to the hub host:port',
+        '    --secret     password to use',
+        '    --role       service role to be',
+        '',
+        '  propagit OPTIONS deploy REPO COMMIT [COMMAND...]',
+        '    --hub        connect to the hub host:port',
+        '    --secret     password to use',
+        '    --role       deploy under this role',
+        '',
+    ].join('\n'));
+}
 
 function parseAddr (addr) {
     var s = addr.toString().split(':');
