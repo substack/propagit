@@ -28,8 +28,9 @@ function Propagit (opts) {
     }
     this.secret = opts.secret;
     
-    this.repodir = path.resolve(opts.repodir || process.cwd() + '/repos');
-    this.deploydir = path.resolve(opts.deploydir || process.cwd() + '/deploy');
+    var base = opts.basedir || process.cwd();
+    this.repodir = path.resolve(opts.repodir || base + '/repos');
+    this.deploydir = path.resolve(opts.deploydir || base + '/deploy');
 }
 
 Propagit.prototype = new EventEmitter;
