@@ -59,8 +59,8 @@ Propagit.prototype.connect = function () {
     
     var uid = (Math.random() * Math.pow(16,8)).toString(16);
     var inst = upnode(function (remote, conn) {
-        this.spawn = function (cmd, args, emit, opts) {
-            self.emit('spawn', cmd, args, emit, opts);
+        this.spawn = function (repo, commit, emit) {
+            self.emit('spawn', repo, commit, emit);
         };
         
         this.fetch = function (repo, emit) {
@@ -158,10 +158,7 @@ Propagit.prototype.deploy = function (hub, repo, commit, cmd, emit) {
             }
             else res.deploy(repo, commit, function (name) {
                 if (name === 'end') {
-                    if (cmd) res.spawn(cmd[0], cmd.slice(1), emit, {
-                        repo : repo,
-                        commit : commit,
-                    });
+                    if (cmd) res.spawn(repo, commit, emit);
                     else conn.end();
                 }
             });

@@ -8,6 +8,7 @@ var cmd = argv._[0];
 
 if (cmd === 'drone') {
     var hub = parseAddr(argv.hub);
+    var command = argv._.slice(1);
     
     propagit(argv).connect(hub, function (c) {
         c.on('error', function (err) {
@@ -47,12 +48,6 @@ if (cmd === 'drone') {
                 ps.stderr.on('end', onend);
             }
         }
-        c.on('spawn', function (cmd, args, emit, opts) {
-            if (opts && opts.repo && opts.commit) {
-                opts.cwd = path.join(c.deploydir, opts.repo + '.' + opts.commit);
-            }
-            spawner(cmd, args, emit, opts);
-        });
         
         function create (repo, emit) {
             path.exists(path.join(c.repodir, repo + '.git'), function (ex) {
@@ -93,7 +88,11 @@ if (cmd === 'drone') {
                 if (name === 'end') {
                     spawner('git',
                         [ 'checkout', commit ],
-                        emit,
+                        function (name) {
+                            if (name === 'end') {
+                                spawner(command[0], command.slice(1), emit);
+                            }
+                        },
                         { cwd : dir }
                     );
                 }
@@ -112,9 +111,8 @@ else if (cmd === 'hub') {
 else if (cmd === 'deploy') {
     var repo = argv._[1];
     var commit = argv._[2];
-    var dcmd = argv._[3] ? argv._.slice(3) : null;
     var hub = parseAddr(argv.hub);
-    propagit(argv).deploy(hub, repo, commit, dcmd, function (name, buf) {
+    propagit(argv).deploy(hub, repo, commit, function (name, buf) {
         if (name === 'data') console.log(buf);
         else if (name === 'end') process.exit();
     });
