@@ -196,6 +196,10 @@ Propagit.prototype.drone = function (hub, command) {
         c.on('deploy', function (repo, commit, emit) {
             var dir = path.join(c.deploydir, repo + '.' + commit);
             var p = refs(repo);
+            
+            process.env.COMMIT = commit;
+            process.env.REPO = repo;
+            
             var ps = procs('git', [ 'clone', p.repodir, dir ])
                 .then('git', [ 'checkout', commit ], { cwd : dir })
                 .then(cmd, args, { cwd : dir })
