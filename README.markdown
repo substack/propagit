@@ -38,16 +38,26 @@ usage
 ```
 Usage:
   propagit OPTIONS hub
+
     Create a server to coordinate drones.
+
     --port       port to listen on
     --secret     password to use
-    --repodir    git repository directory
+    --basedir    directory to put repositories
 
-  propagit OPTIONS drone [COMMAND...]
+  propagit OPTIONS drone
+
+    Listen to the hub for deploy events and execute COMMAND with
+    environment variables $REPO and $COMMIT on each deploy.
+
     --hub        connect to the hub host:port
     --secret     password to use
+    --basedir    directory to put repositories and deploys in
 
-  propagit OPTIONS deploy REPO COMMIT
+  propagit OPTIONS deploy REPO COMMIT [COMMAND...]
+
+    Deploy COMMIT to all of the drones listening to the hub.
+
     --hub        connect to the hub host:port
     --secret     password to use
 ```
