@@ -2,10 +2,11 @@ var dnode = require('dnode');
 var upnode = require('upnode');
 var pushover = require('pushover');
 var mkdirp = require('mkdirp');
+var procs = require('procstreams');
 
 var fs = require('fs');
 var path = require('path');
-var EventEmitter = require('events').EventEmitter;
+var Stream = require('stream').Stream;
 
 module.exports = function (secret) {
     return new Propagit(secret);
@@ -26,6 +27,8 @@ function Propagit (opts) {
     if (typeof opts === 'string') {
         opts = { secret : opts };
     }
+    
+    this.readable = true;
     this.secret = opts.secret;
     
     var base = opts.basedir || process.cwd();
@@ -33,7 +36,7 @@ function Propagit (opts) {
     this.deploydir = path.resolve(opts.deploydir || base + '/deploy');
 }
 
-Propagit.prototype = new EventEmitter;
+Propagit.prototype = new Stream;
 
 Propagit.prototype.connect = function () {
     var self = this;
@@ -148,20 +151,59 @@ Propagit.prototype.listen = function (controlPort, gitPort) {
     repos.listen(gitPort);
 };
 
-Propagit.prototype.deploy = function (hub, repo, commit, cmd, emit) {
+Propagit.prototype.deploy = function (hub, repo, commit) {
     var self = this;
+    var stream = new Stream;
+    stream.readable = true;
+    
     dnode.connect(hub.host, hub.port, function (remote, conn) {
         remote.auth(self.secret, function (err, res) {
             if (err) { 
-                console.error(err);
+                stream.emit('error', err);
                 conn.end();
             }
-            else res.deploy(repo, commit, function (name) {
-                if (name === 'end') {
-                    if (cmd) res.spawn(repo, commit, emit);
-                    else conn.end();
-                }
-            });
+            else {
+                res.deploy(repo, commit, stream.emit.bind(stream));
+                stream.on('end', conn.end.bind(conn));
+            }
         });
     });
+    
+    return stream;
+};
+
+Propagit.prototype.drone = function (hub, command) {
+    var self = this;
+    var cmd = command[0];
+    var args = command.slice(1);
+    
+    self.connect(hub, function (c) {
+        function refs (repo) {
+            return {
+                origin : 'http://' + hub.host + ':' + c.ports.git + '/' + repo,
+                repodir : path.join(c.repodir, repo + '.git'),
+            }
+        }
+        c.on('error', self.emit.bind(self, 'error'));
+        
+        c.on('fetch', function (repo, emit) {
+            var p = refs(repo);
+            procs('git', [ 'init', '--bare', p.repodir ])
+                .then('git', [ 'fetch', p.origin ], { cwd : p.repodir })
+            ;
+        });
+        
+        c.on('deploy', function (repo, commit, emit) {
+            var dir = path.join(c.deploydir, repo + '.' + commit);
+            var p = refs(repo);
+            var ps = procs('git', [ 'clone', p.repodir, dir ])
+                .then('git', [ 'checkout', commit ], { cwd : dir })
+                .then(cmd, args, { cwd : dir })
+            ;
+            ps.on('data', function (buf) { emit('data', buf) });
+            ps.on('end', function () { emit('end') });
+        });
+    });
+    
+    return self;
 };

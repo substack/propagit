@@ -10,94 +10,22 @@ if (cmd === 'drone') {
     var hub = parseAddr(argv.hub);
     var command = argv._.slice(1);
     
-    propagit(argv).connect(hub, function (c) {
-        c.on('error', function (err) {
-            console.error(err && err.stack || err);
-        });
-        
-        c.on('up', function () {
-            console.log('connected to the hub');
-        });
-        
-        c.on('reconnect', function () {
-            console.log('reconnecting to the hub');
-        });
-        
-        c.on('down', function () {
-            console.log('disconnected from the hub');
-        });
-        
-        function spawner (cmd, args, emit, opts) {
-            console.log(cmd + ' ' + args.join(' '));
-            
-            if (!opts) opts = { cwd : c.repodir };
-            var ps = spawn(cmd, args, opts);
-            
-            if (typeof emit === 'function') {
-                ps.stdout.on('data', function (buf) {
-                    emit('data', buf.toString());
-                });
-                ps.stderr.on('data', function (buf) {
-                    emit('data', buf.toString());
-                });
-                var pending = 2;
-                var onend = function () {
-                    if (--pending === 0) emit('end')
-                };
-                ps.stdout.on('end', onend);
-                ps.stderr.on('end', onend);
-            }
-        }
-        
-        function create (repo, emit) {
-            path.exists(path.join(c.repodir, repo + '.git'), function (ex) {
-                if (ex) {
-                    if (typeof emit === 'function') {
-                        emit('end');
-                    }
-                    else if (typeof emit === 'object') {
-                        if (emit.stdout) emit.stdout('end');
-                        if (emit.stderr) emit.stderr('end');
-                    }
-                }
-                else spawner('git',
-                    [ 'init', '--bare', path.join(c.repodir, repo + '.git') ],
-                    emit
-                )
-            });
-        }
-        c.on('fetch', function (repo, emit) {
-            create(repo, function (name) {
-                if (typeof emit === 'function') emit.apply(null, arguments);
-                if (name === 'end') {
-                    spawner('git', [
-                        'fetch',
-                        'http://' + hub.host + ':' + c.ports.git + '/' + repo
-                    ], emit, { cwd : path.join(c.repodir, repo + '.git') });
-                }
-            });
-        });
-        
-        c.on('deploy', function (repo, commit, emit) {
-            var dir = path.join(c.deploydir, repo + '.' + commit);
-            spawner('git', [
-                'clone',
-                path.join(c.repodir, repo + '.git'),
-                dir
-            ], function (name) {
-                if (name === 'end') {
-                    spawner('git',
-                        [ 'checkout', commit ],
-                        function (name) {
-                            if (name === 'end') {
-                                spawner(command[0], command.slice(1), emit);
-                            }
-                        },
-                        { cwd : dir }
-                    );
-                }
-            });
-        });
+    var drone = propagit(argv).drone(hub, command);
+    
+    drone.on('error', function (err) {
+        console.error(err && err.stack || err);
+    });
+    
+    drone.on('up', function (err) {
+        console.log('connected to the hub');
+    });
+    
+    drone.on('reconnect', function (err) {
+        console.log('reconnecting to the hub');
+    });
+    
+    drone.on('down', function (err) {
+        console.log('disconnected from the hub');
     });
 }
 else if (cmd === 'hub') {
@@ -112,10 +40,9 @@ else if (cmd === 'deploy') {
     var repo = argv._[1];
     var commit = argv._[2];
     var hub = parseAddr(argv.hub);
-    propagit(argv).deploy(hub, repo, commit, function (name, buf) {
-        if (name === 'data') console.log(buf);
-        else if (name === 'end') process.exit();
-    });
+    var deploy = propagit(argv).deploy(hub, repo, commit);
+    deploy.pipe(process.stdout);
+    deploy.on('end', process.exit);
 }
 else {
     console.log([
