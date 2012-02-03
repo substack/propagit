@@ -16,6 +16,31 @@ if (cmd === 'drone') {
         console.error(err && err.stack || err);
     });
     
+    drone.on('spawn', function (cmd, args, opts, repo, commit) {
+        console.log(
+            '[' + repo + '.' + commit.slice(8) + '] '
+            + cmd + ' ' + args.join(' ')
+            + ' #' + JSON.stringify(opts)
+        );
+    });
+    
+    drone.on('exit', function (code, sig, repo, commit) {
+        console.error([
+            '[' + repo + '.' + commit.slice(8) + ']',
+            JSON.stringify(command),
+            'exited with code', code,
+            'from', sig,
+        ].join(' '));
+    });
+    
+    drone.on('stdout', function (buf, repo, commit) {
+        console.log('[' + repo + '.' + commit.slice(8) + '] ' + buf);
+    });
+    
+    drone.on('stderr', function (buf, repo, commit) {
+        console.error('[' + repo + '.' + commit.slice(8) + '] ' + buf);
+    });
+    
     drone.on('up', function (err) {
         console.log('connected to the hub');
     });

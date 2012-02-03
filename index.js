@@ -3,6 +3,7 @@ var upnode = require('upnode');
 var pushover = require('pushover');
 var mkdirp = require('mkdirp');
 var procs = require('procstreams');
+var spawn = require('child_process').spawn;
 
 var fs = require('fs');
 var path = require('path');
@@ -111,10 +112,20 @@ Propagit.prototype.listen = function (controlPort, gitPort) {
                     },
                 };
                 if (remote.role !== 'drone') {
-                    res.deploy = function () {
+                    res.deploy = function (repo, commit, emit) {
                         var args = [].slice.call(arguments);
+                        var emit_ = function (name, buf) {
+                            emit.apply(null, arguments);
+                            
+                            if (name === 'data') {
+                                console.log(
+                                    '[' + repo + commit.slice(8) + '] ' + buf
+                                );
+                            }
+                        };
+                        
                         self.drones.forEach(function (drone) {
-                            drone.deploy.apply(null, args);
+                            drone.deploy(repo, commit, emit_);
                         });
                     };
                     res.spawn = function () {
@@ -200,12 +211,30 @@ Propagit.prototype.drone = function (hub, command) {
             process.env.COMMIT = commit;
             process.env.REPO = repo;
             
-            var ps = procs('git', [ 'clone', p.repodir, dir ])
+            procs('git', [ 'clone', p.repodir, dir ])
                 .then('git', [ 'checkout', commit ], { cwd : dir })
-                .then(cmd, args, { cwd : dir })
+                .on('exit', function respawn () {
+                    emit('spawn', cmd, args, { cwd : dir });
+                    self.emit('spawn', cmd, args, { cwd : dir }, repo, commit);
+                    
+                    var ps = spawn(cmd, args, { cwd : dir });
+                    ps.stdout.on('data', function (buf) {
+                        emit('data', buf.toString());
+                        self.emit('stdout', buf, repo, commit);
+                    });
+                    
+                    ps.stderr.on('data', function (buf) {
+                        emit('data', buf.toString());
+                        self.emit('stdout', buf, repo, commit);
+                    });
+                    
+                    ps.on('exit', function (code, sig) {
+                        emit('exit', code, sig);
+                        self.emit('exit', code, sig, repo, commit);
+                        setTimeout(respawn, 1000);
+                    });
+                })
             ;
-            ps.on('data', function (buf) { emit('data', buf) });
-            ps.on('end', function () { emit('end') });
         });
     });
     
