@@ -92,6 +92,10 @@ Propagit.prototype.listen = function (controlPort, gitPort) {
     var self = this;
     mkdirp(self.repodir);
     self.drones = [];
+    self.ports = {
+        control : controlPort,
+        git : gitPort,
+    };
     
     var server = dnode(function (remote, conn) {
         this.auth = function (secret, cb) {
@@ -105,12 +109,7 @@ Propagit.prototype.listen = function (controlPort, gitPort) {
                     });
                 }
                 
-                var res = {
-                    ports : {
-                        control : controlPort,
-                        git : gitPort,
-                    },
-                };
+                var res = { ports : self.ports };
                 if (remote.role !== 'drone') {
                     res.deploy = function (repo, commit, emit) {
                         var args = [].slice.call(arguments);
@@ -160,6 +159,8 @@ Propagit.prototype.listen = function (controlPort, gitPort) {
         });
     });
     repos.listen(gitPort);
+    
+    return self;
 };
 
 Propagit.prototype.deploy = function (hub, repo, commit) {
