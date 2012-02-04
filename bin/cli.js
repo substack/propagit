@@ -8,15 +8,16 @@ var cmd = argv._[0];
 
 if (cmd === 'drone') {
     var hub = parseAddr(argv.hub);
-    var command = argv._.slice(1);
     
-    var drone = propagit(argv).drone(hub, command);
+    var drone = propagit(argv).drone(hub);
     
     drone.on('error', function (err) {
         console.error(err && err.stack || err);
     });
     
+    var command;
     drone.on('spawn', function (cmd, args, opts, repo, commit) {
+        command = cmd + ' ' + args.join(' ');
         console.log(
             '[' + repo + '.' + commit.slice(8) + '] '
             + cmd + ' ' + args.join(' ')
@@ -58,14 +59,22 @@ else if (cmd === 'hub') {
     var gport = argv.gport || cport + 1;
     
     propagit(argv).listen(cport, gport);
+    
     console.log('control service listening on :' + cport);
     console.log('git service listening on :' + gport);
 }
 else if (cmd === 'deploy') {
     var repo = argv._[1];
     var commit = argv._[2];
+    var command = argv._.slice(3);
+    
     var hub = parseAddr(argv.hub);
-    var deploy = propagit(argv).deploy(hub, repo, commit);
+    var deploy = propagit(argv).deploy(hub, {
+        repo : repo,
+        commit : commit,
+        command : command,
+    });
+    
     deploy.pipe(process.stdout);
     deploy.on('end', process.exit);
 }

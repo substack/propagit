@@ -15,8 +15,7 @@ First start up a hub server to listen for git deploys:
 then spin up as many drones as necessary on other machines
 with the command to run on deployment for each type of service:
 
-    $ propagit drone --hub=hubhost:6000 --secret=beepboop \
-        -- node server.js 8085
+    $ propagit drone --hub=hubhost:6000 --secret=beepboop
 
 Now you can `git push` to the hub and the drones will `git fetch` from the hub.
 Just do:
@@ -28,7 +27,8 @@ To deploy the code, use the repo name and git commit hash of the version you
 want to deploy:
 
     $ propagit deploy --hub=hubhost:6000 --secret=beepboop \
-      somerepo ed56c6e85731d412fe22cf437cb63130afc34b07
+      somerepo ed56c6e85731d412fe22cf437cb63130afc34b07 \
+      -- node server.js 8085
     Listening on :8085
     ^C
 
@@ -47,16 +47,16 @@ Usage:
 
   propagit OPTIONS drone
 
-    Listen to the hub for deploy events and execute COMMAND with
-    environment variables $REPO and $COMMIT on each deploy.
-
+    Listen to the hub for deploy events to execute commands with
+    environment variables $REPO and $COMMIT set on each deploy.
+ 
     --hub        connect to the hub host:port
     --secret     password to use
     --basedir    directory to put repositories and deploys in
 
   propagit OPTIONS deploy REPO COMMIT [COMMAND...]
 
-    Deploy COMMIT to all of the drones listening to the hub.
+    Deploy COMMIT with a COMMAND to all of the drones listening to the hub.
 
     --hub        connect to the hub host:port
     --secret     password to use
