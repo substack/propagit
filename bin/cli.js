@@ -71,9 +71,9 @@ else if (cmd === 'deploy') {
         repo : repo,
         commit : commit,
     });
-    
-    deploy.pipe(process.stdout);
-    deploy.on('end', process.exit);
+    deploy.on('deploy', function () {
+        deploy.hub.close();
+    });
 }
 else if (cmd === 'spawn') {
     var repo = argv._[1];

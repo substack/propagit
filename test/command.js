@@ -73,7 +73,7 @@ test('command line deploy', function (t) {
             'deploy', '--hub=localhost:6000', '--secret=beepboop',
             'webapp', commit
         ]);
-        setTimeout(run.bind(null, commit), 1000);
+        ps.deploy.on('exit', run.bind(null, commit));
     }
     
     function run (commit) {

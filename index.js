@@ -137,9 +137,15 @@ Propagit.prototype.createService = function (remote, conn) {
     };
     
     service.deploy = function (opts, cb) {
-        self.getDrones(opts).forEach(function (drone) {
+        var drones = self.getDrones(opts);
+        var pending = drones.length;
+        if (pending === 0) return cb()
+        
+        drones.forEach(function (drone) {
             self.emit('deploy', drone.name, opts);
-            drone.deploy(opts, cb);
+            drone.deploy(opts, function () {
+                if (--pending === 0) cb();
+            });
         });
     };
     
@@ -356,15 +362,14 @@ Propagit.prototype.spawn = function (opts) {
     return stream;
 };
 
-Propagit.prototype.deploy = function (opts) {
+Propagit.prototype.deploy = function (opts, cb) {
     var self = this;
     
-    var stream = new Stream;
-    stream.readable = true;
-    
     self.hub(function (hub) {
-        hub.deploy(opts, stream.emit.bind(stream));
+        hub.deploy(opts, function () {
+            self.emit('deploy');
+        });
     });
     
-    return stream;
+    return self;
 };
