@@ -22,16 +22,19 @@ var src = fs.readFileSync(__dirname + '/webapp/server.js');
 fs.writeFileSync(dirs.repo + '/server.js', src);
 
 test('command line deploy', function (t) {
+    var port = Math.floor(Math.random() * 5e4 + 1e4);
+    var httpPort = Math.floor(Math.random() * 5e4 + 1e4);
+    
     var ps = {};
     ps.hub = spawn(
-        cmd, [ 'hub', '--port=6000', '--secret=beepboop' ],
+        cmd, [ 'hub', '--port=' + port, '--secret=beepboop' ],
         { cwd : dirs.hub }
     );
     ps.hub.stdout.pipe(process.stdout, { end : false });
     ps.hub.stderr.pipe(process.stderr, { end : false });
     
     ps.drone = spawn(
-        cmd, [ 'drone', '--hub=localhost:6000', '--secret=beepboop' ],
+        cmd, [ 'drone', '--hub=localhost:' + port, '--secret=beepboop' ],
         { cwd : dirs.drone }
     );
     ps.drone.stdout.pipe(process.stdout, { end : false });
@@ -47,7 +50,9 @@ test('command line deploy', function (t) {
             function (line) {
                 var commit = line.split(/\s+/)[1]
                 exec(
-                    'git push http://localhost:6001/webapp.git master',
+                    'git push http://localhost:'
+                        + (port + 1)
+                        + '/webapp.git master',
                     opts,
                     deploy.bind(null, commit)
                 );
@@ -70,7 +75,7 @@ test('command line deploy', function (t) {
     function deploy (commit, err, stdout, stderr) {
         if (err) t.fail(err);
         ps.deploy = spawn(cmd, [
-            'deploy', '--hub=localhost:6000', '--secret=beepboop',
+            'deploy', '--hub=localhost:' + port, '--secret=beepboop',
             'webapp', commit
         ]);
         ps.deploy.on('exit', run.bind(null, commit));
@@ -78,9 +83,9 @@ test('command line deploy', function (t) {
     
     function run (commit) {
         ps.run = spawn(cmd, [
-            'spawn', '--hub=localhost:6000', '--secret=beepboop',
+            'spawn', '--hub=localhost:' + port, '--secret=beepboop',
             'webapp', commit,
-            'node', 'server.js', '8085',
+            'node', 'server.js', httpPort,
         ]);
         ps.run.on('exit', function () {
             setTimeout(testServer, 500);
@@ -88,7 +93,7 @@ test('command line deploy', function (t) {
     }
     
     function testServer () {
-        var opts = { host : 'localhost', port : 8085, path : '/' };
+        var opts = { host : 'localhost', port : httpPort, path : '/' };
         http.get(opts, function (res) {
             var data = '';
             res.on('data', function (buf) { data += buf });
