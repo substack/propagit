@@ -289,13 +289,13 @@ Propagit.prototype.drone = function () {
             
             ps.stdout.on('data', function (buf) {
                 if (emit) emit('data', buf.toString());
-                self.emit('stdout', buf, repo, commit);
+                self.emit('stdout', buf, opts);
                 record(buf);
             });
             
             ps.stderr.on('data', function (buf) {
                 if (emit) emit('data', buf.toString());
-                self.emit('stdout', buf, opts);
+                self.emit('stderr', buf, opts);
                 record(buf);
             });
             

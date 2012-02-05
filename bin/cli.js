@@ -21,21 +21,25 @@ if (cmd === 'drone') {
         );
     });
     
-    drone.on('exit', function (code, sig, repo, commit) {
+    drone.on('exit', function (code, sig, opts) {
         console.error([
-            '[' + repo + '.' + commit.slice(8) + ']',
-            JSON.stringify(command),
+            '[' + opts.repo + '.' + opts.commit.slice(8) + ']',
+            opts.command.join(' '),
             'exited with code', code,
             'from', sig,
         ].join(' '));
     });
     
-    drone.on('stdout', function (buf, repo, commit) {
-        console.log('[' + repo + '.' + commit.slice(8) + '] ' + buf);
+    drone.on('stdout', function (buf, opts) {
+        console.log('['
+            + opts.repo + '.' + opts.commit.slice(8)
+        + '] ' + buf);
     });
     
-    drone.on('stderr', function (buf, repo, commit) {
-        console.error('[' + repo + '.' + commit.slice(8) + '] ' + buf);
+    drone.on('stderr', function (buf, opts) {
+        console.log('['
+            + opts.repo + '.' + opts.commit.slice(8)
+        + '] ' + buf);
     });
     
     drone.on('up', function (err) {
