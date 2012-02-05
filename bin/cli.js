@@ -80,7 +80,6 @@ else if (cmd === 'spawn') {
     var commit = argv._[2];
     var command = argv._.slice(3);
     
-    var hub = parseAddr(argv.hub);
     var s = propagit(argv).spawn({
         repo : repo,
         commit : commit,
@@ -88,6 +87,18 @@ else if (cmd === 'spawn') {
     });
     s.on('spawn', function () {
         s.hub.close();
+    });
+}
+else if (cmd === 'ps') {
+    var p = propagit(argv);
+    var s = p.ps();
+    
+    s.on('data', function (name, proc) {
+        console.dir([ name, proc ]);
+    });
+    
+    s.on('end', function () {
+        p.hub.close();
     });
 }
 else {
