@@ -86,9 +86,9 @@ else if (cmd === 'spawn') {
         commit : commit,
         command : command,
     });
-    
-    s.pipe(process.stdout);
-    s.on('end', process.exit);
+    s.on('spawn', function () {
+        s.hub.close();
+    });
 }
 else {
     console.log([
