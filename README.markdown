@@ -3,6 +3,8 @@ propagit
 
 Cascading multi-server git deployment.
 
+[![build status](https://secure.travis-ci.org/substack/propagit.png)](http://travis-ci.org/substack/propagit)
+
 example
 =======
 
