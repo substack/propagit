@@ -22,6 +22,7 @@
         "test" : "test"
     },
     "scripts" : {
+        "test" : "tap test/*.js"
     },
     "dependencies" : {
         "optimist" : "0.3.x",
@@ -32,6 +33,7 @@
         "procstreams" : "0.2.x"
     },
     "devDependencies" : {
+        "tap" : "0.1.x"
     },
     "engines" : {
         "node" : ">=0.4.0"
