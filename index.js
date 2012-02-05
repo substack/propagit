@@ -35,60 +35,42 @@ function Propagit (opts) {
     var base = opts.basedir || process.cwd();
     this.repodir = path.resolve(opts.repodir || base + '/repos');
     this.deploydir = path.resolve(opts.deploydir || base + '/deploy');
+    
+    if (opts.hub) this.connect(opts.hub);
 }
 
 Propagit.prototype = new Stream;
 
-Propagit.prototype.connect = function () {
+Propagit.prototype.connect = function (hub) {
     var self = this;
-    mkdirp(self.deploydir);
-    mkdirp(self.repodir);
     
-    var argv = [].slice.call(arguments).reduce(function (acc, arg) {
-        if (typeof arg === 'function') acc.cb = arg
-        else acc.args.push(arg)
-        return acc;
-    }, { args : [] });
+    if (typeof hub === 'string') {
+        hub = {
+            host : hub.split(':')[0],
+            port : hub.split(':')[1],
+        };
+    }
     
-    var cb = argv.cb;
-    var args = argv.args.concat(function (remote, conn) {
+    var uid = (Math.random() * Math.pow(16,8)).toString(16);
+    var inst = upnode(function (remote, conn) {
+        this.name = uid;
+    });
+    
+    self.hub = inst.connect(hub, function (remote, conn) {
         remote.auth(self.secret, function (err, res) {
             if (err) self.emit('error', err)
             else {
                 self.ports = res.ports;
+                self.gitUri = 'http://' + hub.host + ':' + self.ports.git;
                 conn.emit('up', res);
             };
         });
     });
     
-    var uid = (Math.random() * Math.pow(16,8)).toString(16);
-    var inst = upnode(function (remote, conn) {
-        this.name = (args.object || {}).name || Math.floor(
-            Math.random() * (1<<24)
-        ).toString(16);
-        
-        this.spawn = function (repo, commit, emit) {
-            self.emit('spawn', repo, commit, emit);
-        };
-        
-        this.fetch = function (repo, emit) {
-            self.emit('fetch', repo, emit);
-        };
-        
-        this.deploy = function (opts, emit) {
-            self.emit('deploy', opts, emit);
-        };
-        
-        this.name = uid;
-        this.role = 'drone';
-    });
-    var hub = self.hub = inst.connect.apply(inst, args);
-    
     [ 'up', 'reconnect', 'down' ].forEach(function (name) {
-        hub.on(name, self.emit.bind(self, name));
+        self.hub.on(name, self.emit.bind(self, name));
     });
     
-    cb(self);
     return self;
 };
 
@@ -105,24 +87,7 @@ Propagit.prototype.listen = function (controlPort, gitPort) {
         this.auth = function (secret, cb) {
             if (typeof cb !== 'function') return
             else if (self.secret === secret) {
-                if (remote.role === 'drone') {
-                    self.drones.push(remote);
-                    conn.on('end', function () {
-                        var ix = self.drones.indexOf(remote);
-                        if (ix >= 0) self.drones.splice(ix, 1);
-                    });
-                }
-                
-                cb(null, self.createService(self, remote));
-                
-                if (remote.role === 'drone') {
-                    fs.readdir(self.repodir, function (err, repos) {
-                        if (err) console.error(err)
-                        else repos.forEach(function (repo) {
-                            remote.fetch(repo, logger(remote.name));
-                        });
-                    });
-                }
+                cb(null, self.createService(remote, conn));
             }
             else cb('ACCESS DENIED')
         };
@@ -142,25 +107,26 @@ Propagit.prototype.listen = function (controlPort, gitPort) {
     return self;
 };
 
-Propagit.prototype.createService = function (remote) {
+Propagit.prototype.getDrones = function (opts) {
     var self = this;
+    var names = opts.drone ? [ opts.drone ] : opts.drones;
+    var dnames = self.drones.map(function (d) { return d.name });
     
-    function getDrones (opts) {
-        var names = opts.drone ? [ opts.drone ] : opts.drones;
-        var dnames = self.drones.map(function (d) { return d.name });
-        
-        if (names) {
-            return names.map(function (name) {
-                var ix = dnames.indexOf(name);
-                return self.drones[ix];
-            }).filter(Boolean);
-        }
-        else {
-            var ix = Math.floor(Math.random() * self.drones.length);
-            var drone = self.drones[ix];
-            return drone ? [ drone ] : [];
-        }
+    if (names) {
+        return names.map(function (name) {
+            var ix = dnames.indexOf(name);
+            return self.drones[ix];
+        }).filter(Boolean);
     }
+    else {
+        var ix = Math.floor(Math.random() * self.drones.length);
+        var drone = self.drones[ix];
+        return drone ? [ drone ] : [];
+    }
+};
+
+Propagit.prototype.createService = function (remote, conn) {
+    var self = this;
     
     var service = { ports : self.ports };
     
@@ -170,26 +136,48 @@ Propagit.prototype.createService = function (remote) {
     };
     
     service.deploy = function (opts, cb) {
-        getDrones(opts).forEach(function (drone) {
+        self.getDrones(opts).forEach(function (drone) {
             self.emit('deploy', drone.name, opts);
             drone.deploy(opts, cb);
         });
     };
     
-    service.spawn = function (opts) {
-        getDrones(opts).forEach(function (drone) {
+    service.spawn = function (opts, cb) {
+        self.getDrones(opts).forEach(function (drone) {
+            self.emit('spawn', drone.name, opts);
+            drone.spawn(opts, cb);
         });
+    };
+    
+    service.register = function (role, obj) {
+        if (role === 'drone') {
+            self.drones.push(obj);
+            
+            conn.on('end', function () {
+                var ix = self.drones.indexOf(obj);
+                if (ix >= 0) self.drones.splice(ix, 1);
+            });
+            
+            if (typeof obj.fetch !== 'function') return;
+            
+            fs.readdir(self.repodir, function (err, repos) {
+                if (err) console.error(err)
+                else repos.forEach(function (repo) {
+                    obj.fetch(repo, logger(obj.name));
+                });
+            });
+        }
     };
     
     return service;
 };
 
-Propagit.prototype.deploy = function (hub, opts) {
+Propagit.prototype.deploy = function (opts) {
     var self = this;
     var stream = new Stream;
     stream.readable = true;
     
-    dnode.connect(hub.host, hub.port, function (remote, conn) {
+    dnode.connect(function (remote, conn) {
         remote.auth(self.secret, function (err, res) {
             if (err) { 
                 stream.emit('error', err);
@@ -205,64 +193,190 @@ Propagit.prototype.deploy = function (hub, opts) {
     return stream;
 };
 
-Propagit.prototype.drone = function (hub) {
+Propagit.prototype.drone = function () {
     var self = this;
     
-    self.connect(hub, function (c) {
-        function refs (repo) {
-            return {
-                origin : 'http://' + hub.host + ':' + c.ports.git + '/' + repo,
-                repodir : path.join(c.repodir, repo + '.git'),
-            }
+    mkdirp(self.deploydir);
+    mkdirp(self.repodir);
+    
+    self.processes = {};
+    
+    function refs (repo) {
+        return {
+            origin : self.gitUri + '/' + repo,
+            repodir : path.join(self.repodir, repo + '.git'),
         }
-        c.on('error', self.emit.bind(self, 'error'));
+    }
+    self.on('error', self.emit.bind(self, 'error'));
+    
+    var actions = {};
+    
+    actions.fetch = function (repo, emit) {
+        var p = refs(repo);
+        procs('git', [ 'init', '--bare', p.repodir ])
+            .then('git', [ 'fetch', p.origin ], { cwd : p.repodir })
+        ;
+    };
+    
+    actions.deploy = function (opts, cb) {
+        var repo = opts.repo;
+        var commit = opts.commit;
         
-        c.on('fetch', function (repo, emit) {
-            var p = refs(repo);
-            procs('git', [ 'init', '--bare', p.repodir ])
-                .then('git', [ 'fetch', p.origin ], { cwd : p.repodir })
-            ;
-        });
+        var cmd = opts.command[0];
+        var args = opts.command.slice(1);
         
-        c.on('deploy', function (opts, emit) {
-            var repo = opts.repo;
-            var commit = opts.commit;
+        var dir = path.join(self.deploydir, repo + '.' + commit);
+        var p = refs(repo);
+        
+        process.env.COMMIT = commit;
+        process.env.REPO = repo;
+        
+        spawn('git', [ 'clone', p.repodir, dir ])
+            .on('exit', function (code, sig) {
+                if (code) cb(code, sig)
+                else spawn('git', [ 'checkout', commit ], { cwd : dir })
+                    .on('exit', function (code, sig) {
+                        cb(code, sig)
+                    })
+                ;
+            })
+        ;
+    };
+    
+    actions.stop = function (id, cb) {
+        if (typeof cb !== 'function') cb = function () {};
+        var proc = self.processes[id];
+        if (!proc) cb('no such process')
+        else {
+            proc.status = 'stopped';
+            proc.process.kill();
+            cb();
+        }
+    };
+    
+    actions.restart = function (id, cb) {
+        if (typeof cb !== 'function') cb = function () {};
+        var proc = self.processes[id];
+        if (!proc) cb('no such process')
+        else {
+            if (proc.status === 'stopped') proc.respawn()
+            else proc.process.kill()
+        }
+    };
+    
+    actions.ps = function (cb) {
+        cb(Object.keys(self.processes).reduce(function (acc, id) {
+            var proc = self.processes[id];
+            acc[id] = {
+                scrollback : function (i, j, fn) {
+                    if (typeof fn !== 'function') return;
+                    fn(proc.scrollback.slice(-j, -i));
+                },
+                status : proc.status,
+            };
+            return acc;
+        }, {}));
+    };
+    
+    actions.spawn = function (opts, emit) {
+        var repo = opts.repo;
+        var commit = opts.commit;
+        var dir = path.join(self.deploydir, repo + '.' + commit);
+        opts.directory = dir;
+        
+        var cmd = opts.command[0];
+        var args = opts.command.slice(1);
+        
+        var id = Math.floor(Math.random() * (1<<24)).toString(16);
+        
+        var processes = self.processes;
+        (function respawn () {
+            var ps = spawn(cmd, args, { cwd : dir });
+            var proc = self.processes[id] = {
+                status : 'running',
+                process : ps,
+                scrollback : { size : 0, buffers : [] },
+                respawn : respawn,
+            };
             
-            var cmd = opts.command[0];
-            var args = opts.command.slice(1);
+            function record (buf) {
+                var sb = proc.scrollback;
+                sb.buffers.push(buf);
+                sb.size += buf.length;
+                var max = opts.scrollback || 4096; 
+                
+                while (sb.size > max && sb.buffers.length) {
+                    sb.size -= sb.buffers.shift().length;
+                }
+            }
             
-            var dir = path.join(c.deploydir, repo + '.' + commit);
-            var p = refs(repo);
+            ps.stdout.on('data', function (buf) {
+                if (emit) emit('data', buf.toString());
+                self.emit('stdout', buf, repo, commit);
+                record(buf);
+            });
             
-            process.env.COMMIT = commit;
-            process.env.REPO = repo;
+            ps.stderr.on('data', function (buf) {
+                if (emit) emit('data', buf.toString());
+                self.emit('stdout', buf, opts);
+                record(buf);
+            });
             
-            procs('git', [ 'clone', p.repodir, dir ])
-                .then('git', [ 'checkout', commit ], { cwd : dir })
-                .on('exit', function respawn () {
-                    emit('spawn', cmd, args, { cwd : dir });
-                    self.emit('spawn', cmd, args, { cwd : dir }, repo, commit);
-                    
-                    var ps = spawn(cmd, args, { cwd : dir });
-                    ps.stdout.on('data', function (buf) {
-                        emit('data', buf.toString());
-                        self.emit('stdout', buf, repo, commit);
-                    });
-                    
-                    ps.stderr.on('data', function (buf) {
-                        emit('data', buf.toString());
-                        self.emit('stdout', buf, repo, commit);
-                    });
-                    
-                    ps.on('exit', function (code, sig) {
-                        emit('exit', code, sig);
-                        self.emit('exit', code, sig, repo, commit);
-                        setTimeout(respawn, 1000);
-                    });
-                })
-            ;
+            ps.once('exit', function (code, sig) {
+                if (emit) emit('exit', code, sig);
+                self.emit('exit', code, sig, opts);
+                if (proc.status !== 'stopped') {
+                    proc.status = 'respawning';
+                    setTimeout(respawn, 1000);
+                }
+            });
+            
+            if (emit) emit('spawn', id, opts);
+            self.emit('spawn', id, opts);
+        })();
+    };
+    
+    function onup (remote) {
+        remote.register('drone', actions);
+    }
+    self.hub(onup);
+    self.hub.on('down', function () {
+        self.hub.once('up', onup);
+    });
+    
+    
+    return self;
+};
+
+Propagit.prototype.stop = function (opts, id) {
+    var self = this;
+    
+    if (typeof opts === 'string') {
+        id = opts;
+        opts = undefined;
+    }
+    
+    var stream = new Stream;
+    stream.readable = true;
+    
+    (opts ? self.getDrones(opts) : self.drones).forEach(function (drone) {
+        drone.stop(id, stream.emit.bind(stream));
+    });
+    
+    return stream;
+};
+
+Propagit.prototype.spawn = function (hub, opts) {
+    var self = this;
+    
+    var stream = new Stream;
+    stream.readable = true;
+    
+    self.connect(function (remote, conn) {
+        conn.on('ready', function () {
+            remote.spawn(opts, stream.emit.bind(stream));
         });
     });
     
-    return self;
+    return stream;
 };
