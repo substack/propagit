@@ -7,21 +7,17 @@ var path = require('path');
 var cmd = argv._[0];
 
 if (cmd === 'drone') {
-    var hub = parseAddr(argv.hub);
-    
-    var drone = propagit(argv).drone(hub);
+    var drone = propagit(argv).drone();
     
     drone.on('error', function (err) {
         console.error(err && err.stack || err);
     });
     
     var command;
-    drone.on('spawn', function (cmd, args, opts, repo, commit) {
-        command = cmd + ' ' + args.join(' ');
+    drone.on('spawn', function (id, opts) {
         console.log(
-            '[' + repo + '.' + commit.slice(8) + '] '
-            + cmd + ' ' + args.join(' ')
-            + ' #' + JSON.stringify(opts)
+            '[' + opts.repo + '.' + opts.commit.slice(8) + '] '
+            + opts.command.join(' ')
         );
     });
     
@@ -66,17 +62,29 @@ else if (cmd === 'hub') {
 else if (cmd === 'deploy') {
     var repo = argv._[1];
     var commit = argv._[2];
+    
+    var deploy = propagit(argv).deploy({
+        repo : repo,
+        commit : commit,
+    });
+    
+    deploy.pipe(process.stdout);
+    deploy.on('end', process.exit);
+}
+else if (cmd === 'spawn') {
+    var repo = argv._[1];
+    var commit = argv._[2];
     var command = argv._.slice(3);
     
     var hub = parseAddr(argv.hub);
-    var deploy = propagit(argv).deploy(hub, {
+    var s = propagit(argv).spawn({
         repo : repo,
         commit : commit,
         command : command,
     });
     
-    deploy.pipe(process.stdout);
-    deploy.on('end', process.exit);
+    s.pipe(process.stdout);
+    s.on('end', process.exit);
 }
 else {
     console.log([

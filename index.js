@@ -109,6 +109,7 @@ Propagit.prototype.listen = function (controlPort, gitPort) {
 
 Propagit.prototype.getDrones = function (opts) {
     var self = this;
+    if (!opts) opts = {};
     var names = opts.drone ? [ opts.drone ] : opts.drones;
     var dnames = self.drones.map(function (d) { return d.name });
     
@@ -172,27 +173,6 @@ Propagit.prototype.createService = function (remote, conn) {
     return service;
 };
 
-Propagit.prototype.deploy = function (opts) {
-    var self = this;
-    var stream = new Stream;
-    stream.readable = true;
-    
-    dnode.connect(function (remote, conn) {
-        remote.auth(self.secret, function (err, res) {
-            if (err) { 
-                stream.emit('error', err);
-                conn.end();
-            }
-            else {
-                res.deploy(opts, stream.emit.bind(stream));
-                stream.on('end', conn.end.bind(conn));
-            }
-        });
-    });
-    
-    return stream;
-};
-
 Propagit.prototype.drone = function () {
     var self = this;
     
@@ -221,9 +201,6 @@ Propagit.prototype.drone = function () {
     actions.deploy = function (opts, cb) {
         var repo = opts.repo;
         var commit = opts.commit;
-        
-        var cmd = opts.command[0];
-        var args = opts.command.slice(1);
         
         var dir = path.join(self.deploydir, repo + '.' + commit);
         var p = refs(repo);
@@ -366,16 +343,27 @@ Propagit.prototype.stop = function (opts, id) {
     return stream;
 };
 
-Propagit.prototype.spawn = function (hub, opts) {
+Propagit.prototype.spawn = function (opts) {
     var self = this;
     
     var stream = new Stream;
     stream.readable = true;
     
-    self.connect(function (remote, conn) {
-        conn.on('ready', function () {
-            remote.spawn(opts, stream.emit.bind(stream));
-        });
+    self.hub(function (hub) {
+        hub.spawn(opts, stream.emit.bind(stream));
+    });
+    
+    return stream;
+};
+
+Propagit.prototype.deploy = function (opts) {
+    var self = this;
+    
+    var stream = new Stream;
+    stream.readable = true;
+    
+    self.hub(function (hub) {
+        hub.deploy(opts, stream.emit.bind(stream));
     });
     
     return stream;
