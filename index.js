@@ -192,7 +192,7 @@ Propagit.prototype.createService = function (remote, conn) {
     return service;
 };
 
-Propagit.prototype.drone = function () {
+Propagit.prototype.drone = function (fn) {
     var self = this;
     
     mkdirp(self.deploydir);
@@ -321,6 +321,7 @@ Propagit.prototype.drone = function () {
     };
     
     actions.id = (Math.random() * Math.pow(16,8)).toString(16);
+    if (typeof fn === 'function') fn.call(self, actions);
     
     function onup (remote) {
         remote.register('drone', actions);
@@ -329,7 +330,6 @@ Propagit.prototype.drone = function () {
     self.hub.on('down', function () {
         self.hub.once('up', onup);
     });
-    
     
     return self;
 };
