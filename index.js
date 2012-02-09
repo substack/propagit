@@ -264,10 +264,6 @@ Propagit.prototype.drone = function () {
         cb(Object.keys(self.processes).reduce(function (acc, id) {
             var proc = self.processes[id];
             acc[id] = {
-                scrollback : function (i, j, fn) {
-                    if (typeof fn !== 'function') return;
-                    fn(proc.scrollback.slice(-j, -i));
-                },
                 status : proc.status,
                 repo : proc.repo,
                 commit : proc.commit,
@@ -297,31 +293,17 @@ Propagit.prototype.drone = function () {
                 commit : commit,
                 command : opts.command,
                 process : ps,
-                scrollback : { size : 0, buffers : [] },
                 respawn : respawn,
             };
-            
-            function record (buf) {
-                var sb = proc.scrollback;
-                sb.buffers.push(buf);
-                sb.size += buf.length;
-                var max = opts.scrollback || 4096; 
-                
-                while (sb.size > max && sb.buffers.length) {
-                    sb.size -= sb.buffers.shift().length;
-                }
-            }
             
             ps.stdout.on('data', function (buf) {
                 if (emit) emit('data', buf.toString());
                 self.emit('stdout', buf, opts);
-                record(buf);
             });
             
             ps.stderr.on('data', function (buf) {
                 if (emit) emit('data', buf.toString());
                 self.emit('stderr', buf, opts);
-                record(buf);
             });
             
             ps.once('exit', function (code, sig) {

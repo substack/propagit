@@ -13,7 +13,6 @@ if (cmd === 'drone') {
         console.error(err && err.stack || err);
     });
     
-    var command;
     drone.on('spawn', function (id, opts) {
         console.log(
             '[' + opts.repo + '.' + opts.commit.slice(8) + '] '
