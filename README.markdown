@@ -103,6 +103,8 @@ p.use(fn)
 
 Modify the dnode server or client service with `fn(service)`.
 
+In server mode the `fn` also gets a `conn` object: `fn(service, conn)`.
+
 install
 =======
 

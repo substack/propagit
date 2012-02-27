@@ -195,7 +195,7 @@ Propagit.prototype.createService = function (remote, conn) {
     };
     
     self.middleware.forEach(function (m) {
-        m(service);
+        m(service, conn);
     });
     
     return service;
