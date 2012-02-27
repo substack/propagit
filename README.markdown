@@ -75,6 +75,34 @@ Usage:
     List all the running processes on all the drones.
 ```
 
+methods
+=======
+
+var propagit = require('propagit')
+
+var p = propagit(opts)
+----------------------
+
+Create a new propagit object with `opts`:
+
+* secret - authenticate with this passphrase
+* hub - if specified, connect to this hub
+
+p.drone()
+---------
+
+Register with the connected hub as a drone.
+
+propagit.listen(controlPort, gitPort)
+-------------------------------------
+
+Create a new hub on `controlPort` and start a git http server on `gitPort`.
+
+propagit.use(fn)
+----------------
+
+Modify the dnode server or client service with `fn(service)`.
+
 install
 =======
 

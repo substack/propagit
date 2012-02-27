@@ -31,6 +31,7 @@ function Propagit (opts) {
     
     this.readable = true;
     this.secret = opts.secret;
+    this.middleware = [];
     
     var base = opts.basedir || process.cwd();
     this.repodir = path.resolve(opts.repodir || base + '/repos');
@@ -67,6 +68,10 @@ Propagit.prototype.connect = function (hub) {
     });
     
     return self;
+};
+
+Propagit.prototype.use = function (fn) {
+    this.middleware.push(fn);
 };
 
 Propagit.prototype.listen = function (controlPort, gitPort) {
@@ -189,6 +194,10 @@ Propagit.prototype.createService = function (remote, conn) {
         }
     };
     
+    self.middleware.forEach(function (m) {
+        m(service);
+    });
+    
     return service;
 };
 
@@ -273,7 +282,7 @@ Propagit.prototype.drone = function (fn) {
         }, {}));
     };
     
-    actions.spawn = function (opts, emit) {
+    actions.spawn = function (opts) {
         var repo = opts.repo;
         var commit = opts.commit;
         var dir = path.join(self.deploydir, repo + '.' + commit);
@@ -297,17 +306,14 @@ Propagit.prototype.drone = function (fn) {
             };
             
             ps.stdout.on('data', function (buf) {
-                if (emit) emit('data', buf.toString());
                 self.emit('stdout', buf, opts);
             });
             
             ps.stderr.on('data', function (buf) {
-                if (emit) emit('data', buf.toString());
                 self.emit('stderr', buf, opts);
             });
             
             ps.once('exit', function (code, sig) {
-                if (emit) emit('exit', code, sig);
                 self.emit('exit', code, sig, opts);
                 if (proc.status !== 'stopped') {
                     proc.status = 'respawning';
@@ -315,13 +321,16 @@ Propagit.prototype.drone = function (fn) {
                 }
             });
             
-            if (emit) emit('spawn', id, opts);
             self.emit('spawn', id, opts);
         })();
     };
     
     actions.id = (Math.random() * Math.pow(16,8)).toString(16);
     if (typeof fn === 'function') fn.call(self, actions);
+    
+    self.middleware.forEach(function (m) {
+        m(actions);
+    });
     
     function onup (remote) {
         remote.register('drone', actions);
@@ -334,7 +343,7 @@ Propagit.prototype.drone = function (fn) {
     return self;
 };
 
-Propagit.prototype.stop = function (opts, id) {
+Propagit.prototype.stop = function (opts, id, cb) {
     var self = this;
     
     if (typeof opts === 'string') {
@@ -342,14 +351,13 @@ Propagit.prototype.stop = function (opts, id) {
         opts = undefined;
     }
     
-    var stream = new Stream;
     stream.readable = true;
     
     (opts ? self.getDrones(opts) : self.drones).forEach(function (drone) {
-        drone.stop(id, stream.emit.bind(stream));
+        drone.stop(id, cb);
     });
     
-    return stream;
+    return self;
 };
 
 Propagit.prototype.spawn = function (opts) {
@@ -370,6 +378,7 @@ Propagit.prototype.deploy = function (opts, cb) {
     self.hub(function (hub) {
         hub.deploy(opts, function () {
             self.emit('deploy');
+            if (cb) cb();
         });
     });
     
