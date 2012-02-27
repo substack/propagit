@@ -87,9 +87,7 @@ test('command line deploy', function (t) {
             'webapp', commit,
             'node', 'server.js', httpPort,
         ]);
-        ps.run.on('exit', function () {
-            setTimeout(testServer, 500);
-        });
+        setTimeout(testServer, 2000);
     }
     
     function testServer () {
