@@ -93,13 +93,13 @@ p.drone()
 
 Register with the connected hub as a drone.
 
-propagit.listen(controlPort, gitPort)
--------------------------------------
+p.listen(controlPort, gitPort)
+------------------------------
 
 Create a new hub on `controlPort` and start a git http server on `gitPort`.
 
-propagit.use(fn)
-----------------
+p.use(fn)
+---------
 
 Modify the dnode server or client service with `fn(service)`.
 
