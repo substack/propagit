@@ -1,7 +1,7 @@
 {
     "name" : "propagit",
     "description" : "cascading multi-server git deployment",
-    "version" : "0.4.1",
+    "version" : "0.4.2",
     "repository" : {
         "type" : "git",
         "url" : "git://github.com/substack/propagit.git"
@@ -29,8 +29,7 @@
         "dnode" : "0.9.x",
         "upnode" : "0.1.x",
         "pushover" : "0.1.x",
-        "mkdirp" : "0.3.x",
-        "procstreams" : "0.2.x"
+        "mkdirp" : "0.3.x"
     },
     "devDependencies" : {
         "tap" : "0.1.x"
