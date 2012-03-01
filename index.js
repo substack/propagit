@@ -145,6 +145,7 @@ Propagit.prototype.createService = function (remote, conn) {
     service.ps = function (emit) {
         var drones = self.drones;
         var pending = drones.length;
+        if (pending === 0) emit('end')
         
         drones.forEach(function (drone) {
             drone.ps(function (ps) {
