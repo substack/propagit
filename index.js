@@ -325,6 +325,10 @@ Propagit.prototype.drone = function (fn) {
     actions.spawn = function (opts, cb) {
         var repo = opts.repo;
         var commit = opts.commit;
+        
+        process.env.COMMIT = commit;
+        process.env.REPO = repo;
+        
         var dir = path.join(self.deploydir, repo + '.' + commit);
         opts.directory = dir;
         
