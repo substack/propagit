@@ -203,7 +203,7 @@ Propagit.prototype.createService = function (remote, conn) {
         drones.forEach(function (drone) {
             self.emit('spawn', drone.id, opts);
             drone.spawn(opts, function () {
-                if (--pending === 0) cb();
+                if (--pending === 0) cb(null, drone.id);
             });
         });
     };
@@ -321,7 +321,7 @@ Propagit.prototype.drone = function (fn) {
         }, {}));
     };
     
-    actions.spawn = function (opts) {
+    actions.spawn = function (opts, cb) {
         var repo = opts.repo;
         var commit = opts.commit;
         var dir = path.join(self.deploydir, repo + '.' + commit);
@@ -362,6 +362,8 @@ Propagit.prototype.drone = function (fn) {
             
             self.emit('spawn', id, opts);
         })();
+        
+        cb();
     };
     
     actions.id = (Math.random() * Math.pow(16,8)).toString(16);
