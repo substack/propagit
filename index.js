@@ -209,6 +209,19 @@ Propagit.prototype.createService = function (remote, conn) {
         });
     };
     
+    service.stop = function (opts, cb) {
+        var drones = self.getDrones(opts)
+        var pending = drones.length;
+        if (pending === 0) return cb()
+        
+        drones.forEach(function (drone) {
+            self.emit('stop', drone.id, opts);
+            drone.stop(opts.pid, function () {
+                if (--pending === 0) cb(null, drone.id);
+            });
+        });
+    };
+    
     service.register = function (role, obj) {
         if (role === 'drone') {
             self.drones.push(obj);
@@ -295,6 +308,7 @@ Propagit.prototype.drone = function (fn) {
         else {
             proc.status = 'stopped';
             proc.process.kill();
+            delete self.processes[id];
             cb();
         }
     };
@@ -389,18 +403,13 @@ Propagit.prototype.drone = function (fn) {
     return self;
 };
 
-Propagit.prototype.stop = function (opts, id, cb) {
+Propagit.prototype.stop = function (opts, cb) {
     var self = this;
-    
-    if (typeof opts === 'string') {
-        id = opts;
-        opts = undefined;
-    }
     
     stream.readable = true;
     
     (opts ? self.getDrones(opts) : self.drones).forEach(function (drone) {
-        drone.stop(id, cb);
+        drone.stop(opts.pid, cb);
     });
     
     return self;
