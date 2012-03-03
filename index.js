@@ -375,7 +375,9 @@ Propagit.prototype.drone = function (fn) {
                 self.emit('exit', code, sig, opts);
                 if (proc.status !== 'stopped') {
                     proc.status = 'respawning';
-                    setTimeout(respawn, 1000);
+                    setTimeout(function () {
+                        if (proc.status !== 'stopped') respawn();
+                    }, 1000);
                 }
             });
             
