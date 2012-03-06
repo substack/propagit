@@ -128,6 +128,17 @@ else {
         '    --hub        connect to the hub host:port',
         '    --secret     password to use',
         '',
+        '  propagit OPTIONS spawn REPO COMMIT [COMMAND...]',
+        '',
+        '    Run COMMAND on all the drones specified by OPTIONS.',
+        '    You can specify environment variables to run with'
+            + ' --env.NAME=VALUE.',
+        '',
+        '  propagit OPTIONS ps',
+        '',
+        '    List all the running processes on all the drones.',
+        '',
+        '',
     ].join('\n'));
 }
 
