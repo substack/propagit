@@ -348,6 +348,9 @@ Propagit.prototype.drone = function (fn) {
         process.env.COMMIT = commit;
         process.env.REPO = repo;
         
+        var id = Math.floor(Math.random() * (1<<24)).toString(16);
+        process.env.PROCESS_ID = id;
+        
         Object.keys(opts.env || {}).forEach(function (key) {
             process.env[key] = opts.env[key];
         });
@@ -357,8 +360,6 @@ Propagit.prototype.drone = function (fn) {
         
         var cmd = opts.command[0];
         var args = opts.command.slice(1);
-        
-        var id = Math.floor(Math.random() * (1<<24)).toString(16);
         
         var processes = self.processes;
         (function respawn () {

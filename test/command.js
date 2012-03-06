@@ -101,7 +101,8 @@ test('command line deploy', function (t) {
                 t.equal(obj[0], 'beepity');
                 t.equal(obj[1].REPO, 'webapp');
                 t.ok(obj[1].COMMIT.match(/^[0-9a-f]{40}$/));
-                t.ok(obj[1].PROPAGIT_BEEPITY, 'boop');
+                t.equal(obj[1].PROPAGIT_BEEPITY, 'boop');
+                t.ok(obj[1].PROCESS_ID.match(/^[0-9a-f]{6,}$/));
                 
                 var droneId = obj[1].DRONE_ID;
                 
