@@ -69,6 +69,8 @@ Usage:
   propagit OPTIONS spawn REPO COMMIT [COMMAND...]
   
     Run COMMAND on all the drones specified by OPTIONS.
+    $PROCESS_ID and $DRONE_ID will be set for every spawned process.
+    Note that $PROCESS_ID is not the system PID value.
 
   propagit OPTIONS ps
   
