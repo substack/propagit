@@ -201,10 +201,15 @@ Propagit.prototype.createService = function (remote, conn) {
         var pending = drones.length;
         if (pending === 0) return cb()
         
+        var ids = [];
         drones.forEach(function (drone) {
             self.emit('spawn', drone.id, opts);
+            ids.push(drone.id);
+            if (!opts.env) opts.env = {};
+            if (!opts.env.DRONE_ID) opts.env.DRONE_ID = drone.id;
+            
             drone.spawn(opts, function () {
-                if (--pending === 0) cb(null, drone.id);
+                if (--pending === 0) cb(null, ids);
             });
         });
     };

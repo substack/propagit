@@ -93,13 +93,25 @@ else if (cmd === 'ps') {
     var p = propagit(argv);
     var s = p.ps();
     
-    s.on('data', function (name, proc) {
-        console.dir([ name, proc ]);
-    });
-    
-    s.on('end', function () {
-        p.hub.close();
-    });
+    if (argv.json) {
+        var drones = {};
+        s.on('data', function (name, proc) {
+            drones[name] = proc;
+        });
+        s.on('end', function () {
+            console.log(JSON.stringify(drones));
+            p.hub.close();
+        });
+    }
+    else {
+        s.on('data', function (name, proc) {
+            console.dir([ name, proc ]);
+        });
+        
+        s.on('end', function () {
+            p.hub.close();
+        });
+    }
 }
 else {
     console.log([

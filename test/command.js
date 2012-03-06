@@ -102,8 +102,25 @@ test('command line deploy', function (t) {
                 t.equal(obj[1].REPO, 'webapp');
                 t.ok(obj[1].COMMIT.match(/^[0-9a-f]{40}$/));
                 t.ok(obj[1].PROPAGIT_BEEPITY, 'boop');
-                t.end();
+                
+                var droneId = obj[1].DRONE_ID;
+                
+                ps.ps = spawn(cmd, [
+                    'ps', '--json',
+                    '--hub=localhost:' + port, '--secret=beepboop',
+                ]);
+                readPs(ps.ps, droneId);
             });
+        });
+    }
+    
+    function readPs (p, droneId) {
+        var json = '';
+        p.stdout.on('data', function (buf) { json += buf });
+        p.stdout.on('end', function () {
+            var obj = JSON.parse(json);
+            t.equal(Object.keys(obj)[0], droneId);
+            t.end();
         });
     }
     
