@@ -343,6 +343,10 @@ Propagit.prototype.drone = function (fn) {
         process.env.COMMIT = commit;
         process.env.REPO = repo;
         
+        Object.keys(opts.env || {}).forEach(function (key) {
+            process.env[key] = opts.env[key];
+        });
+        
         var dir = path.join(self.deploydir, repo + '.' + commit);
         opts.directory = dir;
         
