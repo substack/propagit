@@ -84,6 +84,7 @@ test('command line deploy', function (t) {
     function run (commit) {
         ps.run = spawn(cmd, [
             'spawn', '--hub=localhost:' + port, '--secret=beepboop',
+            '--env.PROPAGIT_BEEPITY=boop',
             'webapp', commit,
             'node', 'server.js', httpPort,
         ]);
@@ -96,7 +97,11 @@ test('command line deploy', function (t) {
             var data = '';
             res.on('data', function (buf) { data += buf });
             res.on('end', function () {
-                t.equal(data, 'beep boop');
+                var obj = JSON.parse(data);
+                t.equal(obj[0], 'beepity');
+                t.equal(obj[1].REPO, 'webapp');
+                t.ok(obj[1].COMMIT.match(/^[0-9a-f]{40}$/));
+                t.ok(obj[1].PROPAGIT_BEEPITY, 'boop');
                 t.end();
             });
         });

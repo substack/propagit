@@ -83,6 +83,7 @@ else if (cmd === 'spawn') {
         repo : repo,
         commit : commit,
         command : command,
+        env : argv.env || {},
     });
     s.on('spawn', function () {
         s.hub.close();
