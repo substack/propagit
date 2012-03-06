@@ -373,7 +373,11 @@ Propagit.prototype.drone = function (fn) {
             
             ps.once('exit', function (code, sig) {
                 self.emit('exit', code, sig, opts);
-                if (proc.status !== 'stopped') {
+                
+                if (opts.once) {
+                    delete self.processes[id];
+                }
+                else if (proc.status !== 'stopped') {
                     proc.status = 'respawning';
                     setTimeout(function () {
                         if (proc.status !== 'stopped') respawn();
