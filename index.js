@@ -214,8 +214,6 @@ Propagit.prototype.createService = function (remote, conn) {
                 opts_.drone = drone.id;
                 opts_.id = pid;
                 
-                self.emit('spawn', opts_);
-                
                 procs[drone.id] = pid;
                 if (--pending === 0) cb(null, procs);
             });
@@ -225,12 +223,14 @@ Propagit.prototype.createService = function (remote, conn) {
     service.stop = function (opts, cb) {
         var drones = self.getDrones(opts)
         var pending = drones.length;
-        if (pending === 0) return cb()
+        if (pending === 0) return cb(null, [])
+        var procs = {};
+        if (!Array.isArray(opts.pid)) opts.pid = [ opts.pid ];
         
         drones.forEach(function (drone) {
-            self.emit('stop', drone.id, opts);
-            drone.stop(opts.pid, function () {
-                if (--pending === 0) cb(null, drone.id);
+            drone.stop(opts.pid, function (pids) {
+                procs[drone.id] = pids;
+                if (--pending === 0) cb(null, procs);
             });
         });
     };
@@ -320,16 +320,20 @@ Propagit.prototype.drone = function (fn) {
         ;
     };
     
-    actions.stop = function (id, cb) {
+    actions.stop = function (ids, cb) {
         if (typeof cb !== 'function') cb = function () {};
-        var proc = self.processes[id];
-        if (!proc) cb('no such process')
-        else {
+        if (!Array.isArray(ids)) ids = [ ids ];
+        cb(ids.filter(function (id) {
+            var proc = self.processes[id];
+            if (!proc) return false;
+            self.emit('stop', { drone : actions.id, id : id });
+            
             proc.status = 'stopped';
             proc.process.kill();
             delete self.processes[id];
-            cb();
-        }
+            
+            return true;
+        }));
     };
     
     actions.restart = function (id, cb) {
