@@ -307,6 +307,12 @@ Propagit.prototype.drone = function (fn) {
                 if (code) cb(code, sig)
                 else spawn('git', [ 'checkout', commit ], { cwd : dir })
                     .on('exit', function (code, sig) {
+                        self.emit('deploy', {
+                            drone : actions.id,
+                            commit : commit,
+                            repo : repo,
+                            cwd : dir,
+                        });
                         cb(code, sig)
                     })
                 ;
