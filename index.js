@@ -201,15 +201,15 @@ Propagit.prototype.createService = function (remote, conn) {
         var pending = drones.length;
         if (pending === 0) return cb()
         
-        var ids = [];
+        var procs = {};
         drones.forEach(function (drone) {
             self.emit('spawn', drone.id, opts);
-            ids.push(drone.id);
             if (!opts.env) opts.env = {};
             if (!opts.env.DRONE_ID) opts.env.DRONE_ID = drone.id;
             
-            drone.spawn(opts, function () {
-                if (--pending === 0) cb(null, ids);
+            drone.spawn(opts, function (pid) {
+                procs[drone.id] = pid;
+                if (--pending === 0) cb(null, procs);
             });
         });
     };
@@ -355,8 +355,7 @@ Propagit.prototype.drone = function (fn) {
             process.env[key] = opts.env[key];
         });
         
-        var dir = path.join(self.deploydir, repo + '.' + commit);
-        opts.directory = dir;
+        var dir = opts.cwd || path.join(self.deploydir, repo + '.' + commit);
         
         var cmd = opts.command[0];
         var args = opts.command.slice(1);
@@ -369,20 +368,38 @@ Propagit.prototype.drone = function (fn) {
                 repo : repo,
                 commit : commit,
                 command : opts.command,
+                cwd : dir,
                 process : ps,
                 respawn : respawn,
+                drone : actions.id,
             };
             
             ps.stdout.on('data', function (buf) {
-                self.emit('stdout', buf, opts);
+                self.emit('stdout', buf, {
+                    drone : actions.id,
+                    id : id,
+                    repo : repo,
+                    commit : commit,
+                });
             });
             
             ps.stderr.on('data', function (buf) {
-                self.emit('stderr', buf, opts);
+                self.emit('stderr', buf, {
+                    drone : actions.id,
+                    id : id,
+                    repo : repo,
+                    commit : commit,
+                });
             });
             
             ps.once('exit', function (code, sig) {
-                self.emit('exit', code, sig, opts);
+                self.emit('exit', code, sig, {
+                    drone : actions.id,
+                    id : id,
+                    repo : repo,
+                    commit : commit,
+                    command : opts.command,
+                });
                 
                 if (opts.once) {
                     delete self.processes[id];
@@ -398,7 +415,7 @@ Propagit.prototype.drone = function (fn) {
             self.emit('spawn', id, opts);
         })();
         
-        cb();
+        cb(id);
     };
     
     actions.id = (Math.random() * Math.pow(16,8)).toString(16);
