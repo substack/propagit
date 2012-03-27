@@ -1,4 +1,3 @@
-var dnode = require('dnode');
 var upnode = require('upnode');
 var pushover = require('pushover');
 var mkdirp = require('mkdirp');
@@ -82,7 +81,7 @@ Propagit.prototype.listen = function (controlPort, gitPort) {
         git : gitPort,
     };
     
-    var server = dnode(function (remote, conn) {
+    var server = upnode(function (remote, conn) {
         this.auth = function (secret, cb) {
             if (typeof cb !== 'function') return
             else if (self.secret === secret) {
@@ -90,9 +89,16 @@ Propagit.prototype.listen = function (controlPort, gitPort) {
             }
             else cb('ACCESS DENIED')
         };
-    });
-    server.use(upnode.ping);
-    server.listen(controlPort);
+    }).listen(controlPort);
+    
+    if (!self._servers) self._servers = [];
+    self._servers.push(server);
+    
+    self.close = function () {
+        self._servers.forEach(function (s) {
+            s.close();
+        });
+    };
     
     var repos = self.repos = pushover(self.repodir);
     repos.on('push', function (repo) {
