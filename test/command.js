@@ -52,7 +52,7 @@ test('command line deploy', function (t) {
                 exec(
                     'git push http://localhost:'
                         + (port + 1)
-                        + '/webapp.git master',
+                        + '/webapp master',
                     opts,
                     deploy.bind(null, commit)
                 );
