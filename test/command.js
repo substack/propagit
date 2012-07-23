@@ -63,6 +63,7 @@ test('command line deploy', function (t) {
             if (!cmd) return;
             else if (typeof cmd === 'string') {
                 exec(cmd, opts, function (err, out) {
+                    if (err) t.fail(err);
                     pop(out);
                 });
             }
@@ -78,10 +79,14 @@ test('command line deploy', function (t) {
             'deploy', '--hub=localhost:' + port, '--secret=beepboop',
             'webapp', commit
         ]);
+        ps.deploy.stderr.pipe(process.stdout, { end : false });
+        ps.deploy.stdout.pipe(process.stderr, { end : false });
+        
         ps.deploy.on('exit', run.bind(null, commit));
     }
     
     function run (commit) {
+console.log('run!'); 
         ps.run = spawn(cmd, [
             'spawn', '--hub=localhost:' + port, '--secret=beepboop',
             '--env.PROPAGIT_BEEPITY=boop',
@@ -94,6 +99,7 @@ test('command line deploy', function (t) {
     function testServer () {
         var opts = { host : 'localhost', port : httpPort, path : '/' };
         http.get(opts, function (res) {
+console.log('get!'); 
             var data = '';
             res.on('data', function (buf) { data += buf });
             res.on('end', function () {
@@ -116,6 +122,7 @@ test('command line deploy', function (t) {
     }
     
     function readPs (p, droneId) {
+console.log('readPs!'); 
         var json = '';
         p.stdout.on('data', function (buf) { json += buf });
         p.stdout.on('end', function () {

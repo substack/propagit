@@ -172,29 +172,22 @@ Propagit.prototype.createService = function (remote, conn) {
         
         drones.forEach(function (drone) {
             self.emit('deploy', drone.id, opts);
-            drone.fetch(opts.repo, function (code, sig) {
-                if (code) {
-                    pending --;
-                    var err = new Error(
-                        'git fetch exited with error code ' + code
+            drone.fetch(opts.repo, function (err) {
+                pending --;
+                
+                if (err) {
+                    errors.push(
+                        'Error fetching from drone ' + drone.id + ':\n'
+                        + err
                     );
-                    err.command = 'fetch';
-                    err.drone = drone.id;
-                    err.code = code;
-                    err.signal = sig;
-                    errors.push(err);
+                    if (pending === 0) cb(errors.length && errors);
                 }
-                else drone.deploy(opts, function (code, sig) {
-                    pending --;
-                    if (code) {
-                        var err = new Error(
-                            'deploy exited with error code ' + code
+                else drone.deploy(opts, function (err) {
+                    if (err) {
+                        errors.push(
+                            'Error deploying to drone ' + drone.id + ':\n'
+                            + err
                         );
-                        err.command = 'deploy';
-                        err.drone = drone.id;
-                        err.code = code;
-                        err.signal = sig;
-                        errors.push(err);
                     }
                     if (pending === 0) cb(errors.length && errors);
                 })
@@ -288,14 +281,11 @@ Propagit.prototype.drone = function (fn) {
     
     actions.fetch = function (repo, cb) {
         var p = refs(repo);
-        spawn('git', [ 'init', '--bare', p.repodir ])
-            .on('exit', function (code, sig) {
-                if (code) cb(code, sig)
-                else spawn('git', [ 'fetch', p.origin ], { cwd : p.repodir })
-                    .on('exit', cb)
-                ;
-            })
-        ;
+        runCmd([ 'git', 'init', '--bare', p.repodir ], function (err) {
+            if (err) return cb(err);
+            
+            runCmd([ 'git', 'fetch', p.origin ], { cwd : p.repodir }, cb);
+        });
     };
     
     actions.deploy = function (opts, cb) {
@@ -308,22 +298,21 @@ Propagit.prototype.drone = function (fn) {
         process.env.COMMIT = commit;
         process.env.REPO = repo;
         
-        spawn('git', [ 'clone', p.repodir, dir ])
-            .on('exit', function (code, sig) {
-                if (code) cb(code, sig)
-                else spawn('git', [ 'checkout', commit ], { cwd : dir })
-                    .on('exit', function (code, sig) {
-                        self.emit('deploy', {
-                            drone : actions.id,
-                            commit : commit,
-                            repo : repo,
-                            cwd : dir,
-                        });
-                        cb(code, sig)
-                    })
-                ;
-            })
-        ;
+        runCmd([ 'git', 'clone', p.repodir, dir ], function (err) {
+            if (err) return cb(err);
+            
+            runCmd([ 'git', 'checkout', commit ], { cwd : dir },
+            function (err) {
+                if (err) return cb(err);
+                self.emit('deploy', {
+                    drone : actions.id,
+                    commit : commit,
+                    repo : repo,
+                    cwd : dir,
+                });
+                cb(null)
+            });
+        });
     };
     
     actions.stop = function (ids, cb) {
@@ -495,7 +484,9 @@ Propagit.prototype.deploy = function (opts, cb) {
     var self = this;
     
     self.hub(function (hub) {
-        hub.deploy(opts, function () {
+        hub.deploy(opts, function (err) {
+            if (err) return cb && cb(err);
+            
             self.emit('deploy');
             if (cb) cb();
         });
@@ -512,3 +503,37 @@ Propagit.prototype.ps = function () {
     });
     return stream;
 };
+
+function runCmd (cmd, opts, cb) {
+    if (typeof opts === 'function') {
+        cb = opts;
+        opts = {};
+    }
+    
+    var ps = spawn(cmd[0], cmd.slice(1));
+    var data = '';
+    ps.stdout.on('data', function (buf) { data += buf });
+    ps.stderr.on('data', function (buf) { data += buf });
+    
+    var code, sig;
+    var pending = 3;
+    function onend () {
+        if (--pending !== 0) return;
+        
+        if (code) {
+            cb([
+                'Exited with code ' + code + ':',
+                'Command: ' + cmd.join(' '),
+                data
+            ].join('\n'))
+        }
+        else cb(null)
+    }
+    
+    ps.on('exit', function (c, s) {
+        code = c, sig = s;
+    });
+    ps.on('exit', onend);
+    ps.stdout.on('end', onend);
+    ps.stderr.on('end', onend);
+}

@@ -66,9 +66,14 @@ else if (cmd === 'deploy') {
     var repo = argv._[1];
     var commit = argv._[2];
     
-    var deploy = propagit(argv).deploy({
+    var opts = {
         repo : repo,
         commit : commit,
+    };
+    var deploy = propagit(argv).deploy(opts, function (errors) {
+        if (errors) errors.forEach(function (err) {
+            console.error(err);
+        });
     });
     deploy.on('deploy', function () {
         deploy.hub.close();

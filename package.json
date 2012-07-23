@@ -25,10 +25,10 @@
         "test" : "tap test/*.js"
     },
     "dependencies" : {
-        "optimist" : "0.3.x",
-        "upnode" : "~0.2.0",
-        "pushover" : "0.1.x",
-        "mkdirp" : "0.3.x"
+        "optimist" : "~0.3.4",
+        "upnode" : "~0.2.4",
+        "pushover" : "~0.1.4",
+        "mkdirp" : "~0.3.3"
     },
     "devDependencies" : {
         "tap" : "~0.2.3"
