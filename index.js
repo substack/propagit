@@ -3,6 +3,8 @@ var pushover = require('pushover');
 var mkdirp = require('mkdirp');
 var spawn = require('child_process').spawn;
 
+var createWebServer = require('./lib/web');
+
 var fs = require('fs');
 var path = require('path');
 var Stream = require('stream').Stream;
@@ -107,7 +109,7 @@ Propagit.prototype.listen = function (controlPort, gitPort) {
             drone.fetch(repo, logger(drone.id));
         });
     });
-    repos.listen(gitPort);
+    createWebServer(repos, self.secret).listen(gitPort);
     
     return self;
 };
