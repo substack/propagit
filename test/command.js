@@ -30,15 +30,11 @@ test('command line deploy', function (t) {
         cmd, [ 'hub', '--port=' + port, '--secret=beepboop' ],
         { cwd : dirs.hub }
     );
-    ps.hub.stdout.pipe(process.stdout, { end : false });
-    ps.hub.stderr.pipe(process.stderr, { end : false });
     
     ps.drone = spawn(
         cmd, [ 'drone', '--hub=localhost:' + port, '--secret=beepboop' ],
         { cwd : dirs.drone }
     );
-    ps.drone.stdout.pipe(process.stdout, { end : false });
-    ps.drone.stderr.pipe(process.stderr, { end : false });
     
     setTimeout(function () {
         var opts = { cwd : dirs.repo };
@@ -79,14 +75,11 @@ test('command line deploy', function (t) {
             'deploy', '--hub=localhost:' + port, '--secret=beepboop',
             'webapp', commit
         ]);
-        ps.deploy.stderr.pipe(process.stdout, { end : false });
-        ps.deploy.stdout.pipe(process.stderr, { end : false });
         
         ps.deploy.on('exit', run.bind(null, commit));
     }
     
     function run (commit) {
-console.log('run!'); 
         ps.run = spawn(cmd, [
             'spawn', '--hub=localhost:' + port, '--secret=beepboop',
             '--env.PROPAGIT_BEEPITY=boop',
@@ -99,7 +92,6 @@ console.log('run!');
     function testServer () {
         var opts = { host : 'localhost', port : httpPort, path : '/' };
         http.get(opts, function (res) {
-console.log('get!'); 
             var data = '';
             res.on('data', function (buf) { data += buf });
             res.on('end', function () {
@@ -122,7 +114,6 @@ console.log('get!');
     }
     
     function readPs (p, droneId) {
-console.log('readPs!'); 
         var json = '';
         p.stdout.on('data', function (buf) { json += buf });
         p.stdout.on('end', function () {

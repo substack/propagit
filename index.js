@@ -271,8 +271,12 @@ Propagit.prototype.drone = function (fn) {
     
     function refs (repo) {
         return {
-            origin : (self.gitUri + '/' + repo).replace(/(\.git)*$/, '.git'),
-            repodir : path.join(self.repodir, repo + '.git'),
+            origin : (self.gitUri + '/' + repo)
+                .replace(/(\.git)*$/, '.git')
+            ,
+            repodir : path.join(self.repodir, repo + '.git')
+                .replace(/(\.git)*$/, '.git')
+            ,
         }
     }
     self.on('error', self.emit.bind(self, 'error'));
@@ -281,12 +285,8 @@ Propagit.prototype.drone = function (fn) {
     
     actions.fetch = function (repo, cb) {
         var p = refs(repo);
-console.log('FETCH ' + p.repodir); 
-        runCmd([ 'git', 'init', '--bare', p.repodir ], function (err) {
+        runCmd([ 'git', 'init', p.repodir ], function (err) {
             if (err) return cb(err);
-            
-console.log('+ ' + p.origin); 
-console.dir(fs.readdirSync(p.repodir));
             runCmd([ 'git', 'fetch', p.origin ], { cwd : p.repodir }, cb);
         });
     };
@@ -513,7 +513,7 @@ function runCmd (cmd, opts, cb) {
         opts = {};
     }
     
-    var ps = spawn(cmd[0], cmd.slice(1));
+    var ps = spawn(cmd[0], cmd.slice(1), opts);
     var data = '';
     ps.stdout.on('data', function (buf) { data += buf });
     ps.stderr.on('data', function (buf) { data += buf });
