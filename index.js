@@ -271,7 +271,7 @@ Propagit.prototype.drone = function (fn) {
     
     function refs (repo) {
         return {
-            origin : self.gitUri + '/' + repo,
+            origin : (self.gitUri + '/' + repo).replace(/(\.git)*$/, '.git'),
             repodir : path.join(self.repodir, repo + '.git'),
         }
     }
@@ -281,9 +281,12 @@ Propagit.prototype.drone = function (fn) {
     
     actions.fetch = function (repo, cb) {
         var p = refs(repo);
+console.log('FETCH ' + p.repodir); 
         runCmd([ 'git', 'init', '--bare', p.repodir ], function (err) {
             if (err) return cb(err);
             
+console.log('+ ' + p.origin); 
+console.dir(fs.readdirSync(p.repodir));
             runCmd([ 'git', 'fetch', p.origin ], { cwd : p.repodir }, cb);
         });
     };
