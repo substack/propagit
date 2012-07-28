@@ -30,7 +30,7 @@ function Propagit (opts) {
     }
     
     this.readable = true;
-    this.secret = opts.secret;
+    this.secret = opts.secret || '';
     this.middleware = [];
     
     var base = opts.basedir || process.cwd();
@@ -53,11 +53,16 @@ Propagit.prototype.connect = function (hub) {
     }
     
     self.hub = upnode.connect(hub, function (remote, conn) {
+        var auth = self.secret && 'git:' + encodeURIComponent(self.secret);
+        
         remote.auth(self.secret, function (err, res) {
             if (err) self.emit('error', err)
             else {
                 self.ports = res.ports;
-                self.gitUri = 'http://' + hub.host + ':' + self.ports.git;
+                self.gitUri = 'http://'
+                    + (self.secret ? auth + '@' : '')
+                    + hub.host + ':' + self.ports.git
+                ;
                 conn.emit('up', res);
             };
         });

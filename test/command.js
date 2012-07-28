@@ -44,9 +44,9 @@ test('command line deploy', function (t) {
             'git commit -m"web server"',
             'git log|head -n1',
             function (line) {
-                var commit = line.split(/\s+/)[1]
+                var commit = line.split(/\s+/)[1];
                 exec(
-                    'git push http://localhost:'
+                    'git push http://git:beepboop@localhost:'
                         + (port + 1)
                         + '/webapp.git master',
                     opts,
