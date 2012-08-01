@@ -9,6 +9,8 @@ var fs = require('fs');
 var path = require('path');
 var Stream = require('stream').Stream;
 
+var exists = fs.exists || path.exists;
+
 module.exports = function (secret) {
     return new Propagit(secret);
 };
@@ -300,24 +302,28 @@ Propagit.prototype.drone = function (fn) {
         var commit = opts.commit;
         
         var dir = path.join(self.deploydir, repo + '.' + commit);
-        var p = refs(repo);
-        
-        process.env.COMMIT = commit;
-        process.env.REPO = repo;
-        
-        runCmd([ 'git', 'clone', self.repodir, dir ], function (err) {
-            if (err) return cb(err);
+        exists(dir, function (ex) {
+            if (ex) return cb(null, false); // already deployed this commit
             
-            runCmd([ 'git', 'checkout', commit ], { cwd : dir },
-            function (err) {
+            var p = refs(repo);
+            
+            process.env.COMMIT = commit;
+            process.env.REPO = repo;
+            
+            runCmd([ 'git', 'clone', self.repodir, dir ], function (err) {
                 if (err) return cb(err);
-                self.emit('deploy', {
-                    drone : actions.id,
-                    commit : commit,
-                    repo : repo,
-                    cwd : dir,
+                
+                runCmd([ 'git', 'checkout', commit ], { cwd : dir },
+                function (err) {
+                    if (err) return cb(err);
+                    self.emit('deploy', {
+                        drone : actions.id,
+                        commit : commit,
+                        repo : repo,
+                        cwd : dir,
+                    });
+                    cb(null, true)
                 });
-                cb(null)
             });
         });
     };
