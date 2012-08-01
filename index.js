@@ -281,9 +281,6 @@ Propagit.prototype.drone = function (fn) {
             origin : (self.gitUri + '/' + repo)
                 .replace(/(\.git)*$/, '.git')
             ,
-            repodir : path.join(self.repodir, repo + '.git')
-                .replace(/(\.git)*$/, '.git')
-            ,
         }
     }
     self.on('error', self.emit.bind(self, 'error'));
@@ -292,9 +289,9 @@ Propagit.prototype.drone = function (fn) {
     
     actions.fetch = function (repo, cb) {
         var p = refs(repo);
-        runCmd([ 'git', 'init', p.repodir ], function (err) {
+        runCmd([ 'git', 'init', self.repodir ], function (err) {
             if (err) return cb(err);
-            runCmd([ 'git', 'fetch', p.origin ], { cwd : p.repodir }, cb);
+            runCmd([ 'git', 'fetch', p.origin ], { cwd : self.repodir }, cb);
         });
     };
     
@@ -308,7 +305,7 @@ Propagit.prototype.drone = function (fn) {
         process.env.COMMIT = commit;
         process.env.REPO = repo;
         
-        runCmd([ 'git', 'clone', p.repodir, dir ], function (err) {
+        runCmd([ 'git', 'clone', self.repodir, dir ], function (err) {
             if (err) return cb(err);
             
             runCmd([ 'git', 'checkout', commit ], { cwd : dir },
