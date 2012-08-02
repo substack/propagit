@@ -38,6 +38,7 @@ function Propagit (opts) {
     var base = opts.basedir || process.cwd();
     this.repodir = path.resolve(opts.repodir || base + '/repos');
     this.deploydir = path.resolve(opts.deploydir || base + '/deploy');
+    this.name = opts.name || (Math.random() * Math.pow(16,8)).toString(16);
     
     if (opts.hub) this.connect(opts.hub);
 }
@@ -134,7 +135,7 @@ Propagit.prototype.getDrones = function (opts) {
             return opts.drone.test(d.id);
         });
     }
-    if (names) {
+    if (Array.isArray(names) && names.length) {
         return names.map(function (name) {
             var ix = ids.indexOf(name);
             return self.drones[ix];
@@ -245,6 +246,19 @@ Propagit.prototype.createService = function (remote, conn) {
     
     service.register = function (role, obj) {
         if (role === 'drone') {
+            if (typeof obj !== 'object') return;
+            obj.id = String(obj.id);
+            var ids = self.drones.map(function (d) { return d.id });
+            if (ids.indexOf(obj.id) >= 0 && !/-\d+$/.test(obj.id)) {
+                obj.id += '-1';
+            }
+            
+            while (ids.indexOf(obj.id) >= 0) {
+                obj.id.replace(/-(\d+)/, function (_, x) {
+                    return x + 1
+                });
+            }
+            
             self.drones.push(obj);
             
             conn.on('end', function () {
@@ -451,7 +465,7 @@ Propagit.prototype.drone = function (fn) {
         cb(id);
     };
     
-    actions.id = (Math.random() * Math.pow(16,8)).toString(16);
+    actions.id = self.name;
     if (typeof fn === 'function') fn.call(self, actions);
     
     self.middleware.forEach(function (m) {
