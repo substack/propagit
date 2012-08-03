@@ -249,12 +249,9 @@ Propagit.prototype.createService = function (remote, conn) {
             if (typeof obj !== 'object') return;
             obj.id = String(obj.id);
             var ids = self.drones.map(function (d) { return d.id });
-            if (ids.indexOf(obj.id) >= 0 && !/-\d+$/.test(obj.id)) {
-                obj.id += '-1';
-            }
             
             while (ids.indexOf(obj.id) >= 0) {
-                obj.id.replace(/(?:-(\d+))?$/, function (_, x) {
+                obj.id = obj.id.replace(/(?:-(\d+))?$/, function (_, x) {
                     return '-' + (parseInt(x || '0', 10) + 1);
                 });
             }
