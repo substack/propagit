@@ -254,8 +254,8 @@ Propagit.prototype.createService = function (remote, conn) {
             }
             
             while (ids.indexOf(obj.id) >= 0) {
-                obj.id.replace(/-(\d+)/, function (_, x) {
-                    return x + 1
+                obj.id.replace(/(?:-(\d+))?$/, function (_, x) {
+                    return '-' + (parseInt(x || '0', 10) + 1);
                 });
             }
             
