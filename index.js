@@ -397,6 +397,12 @@ Propagit.prototype.drone = function (fn) {
         var cmd = opts.command[0];
         var args = opts.command.slice(1);
         
+        if (opts.detached) return spawn(cmd, args, {
+            cwd : dir,
+            detached : true,
+            stdio : 'ignore'
+        }).unref();
+        
         var processes = self.processes;
         (function respawn () {
             var ps = spawn(cmd, args, { cwd : dir });
