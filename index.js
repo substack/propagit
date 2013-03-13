@@ -311,6 +311,7 @@ Propagit.prototype.drone = function (fn) {
     actions.deploy = function (opts, cb) {
         var repo = opts.repo;
         var commit = opts.commit;
+        var recursive = opts.recursive;
         
         var dir = path.join(self.deploydir, repo + '.' + commit);
         exists(dir, function (ex) {
@@ -320,8 +321,13 @@ Propagit.prototype.drone = function (fn) {
             
             process.env.COMMIT = commit;
             process.env.REPO = repo;
+
+            var cmd = [ 'git', 'clone', self.repodir, dir ];
+            if (recursive) {
+                cmd.splice(2, 0, '--recursive');
+            }
             
-            runCmd([ 'git', 'clone', self.repodir, dir ], function (err) {
+            runCmd(cmd, function (err) {
                 if (err) return cb(err);
                 
                 runCmd([ 'git', 'checkout', commit ], { cwd : dir },
